@@ -1,0 +1,430 @@
+{
+  "info": {
+    "version": "1.0.0",
+    "description": "API for chat application built with Elixir and Phoenix Framework",
+    "title": "Elixir Phoenix Chat API",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "termsOfService": "https://example.com/terms-of-service"
+  },
+  "host": "localhost:4000",
+  "definitions": {
+    "LoginRequest": {
+      "description": "Request schema for user login",
+      "properties": {
+        "email": {
+          "description": "Email address",
+          "format": "email",
+          "type": "string"
+        },
+        "password": {
+          "description": "User password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "title": "LoginRequest",
+      "type": "object"
+    },
+    "LoginResponse": {
+      "description": "Response schema for user login",
+      "properties": {
+        "token": {
+          "description": "Authentication token",
+          "type": "string"
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "title": "LoginResponse",
+      "type": "object"
+    },
+    "PasswordChangeRequest": {
+      "description": "Request schema for changing password",
+      "properties": {
+        "current_password": {
+          "description": "Current password",
+          "type": "string"
+        },
+        "email": {
+          "description": "Email address",
+          "format": "email",
+          "type": "string"
+        },
+        "new_password": {
+          "description": "New password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "current_password",
+        "new_password"
+      ],
+      "title": "PasswordChangeRequest",
+      "type": "object"
+    },
+    "User": {
+      "description": "A user of the application",
+      "example": {
+        "created_at": "2023-03-31T12:34:55Z",
+        "email": "user@example.com",
+        "id": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      "properties": {
+        "created_at": {
+          "description": "Creation timestamp",
+          "format": "date-time",
+          "type": "string"
+        },
+        "email": {
+          "description": "Email address",
+          "format": "email",
+          "type": "string"
+        },
+        "id": {
+          "description": "User ID",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ],
+      "title": "User",
+      "type": "object"
+    },
+    "UserRequest": {
+      "description": "Request schema for creating a user",
+      "properties": {
+        "email": {
+          "description": "Email address",
+          "format": "email",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "title": "UserRequest",
+      "type": "object"
+    },
+    "UserResponse": {
+      "description": "Response schema for user creation",
+      "properties": {
+        "email": {
+          "description": "Email address",
+          "format": "email",
+          "type": "string"
+        },
+        "generated_password": {
+          "description": "Generated password",
+          "type": "string"
+        },
+        "message": {
+          "description": "Success message",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "User ID",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "email",
+        "generated_password",
+        "message"
+      ],
+      "title": "UserResponse",
+      "type": "object"
+    },
+    "Message": {
+      "description": "A message in the system",
+      "properties": {
+        "content": {
+          "description": "Message content",
+          "type": "string"
+        },
+        "created_at": {
+          "description": "Creation timestamp",
+          "format": "date-time",
+          "type": "string"
+        },
+        "id": {
+          "description": "Message ID",
+          "format": "uuid",
+          "type": "string"
+        },
+        "sender_email": {
+          "description": "Email of the message sender",
+          "format": "email",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "content",
+        "created_at"
+      ],
+      "title": "Message",
+      "type": "object"
+    },
+    "MessageRequest": {
+      "description": "Request schema for sending a message",
+      "properties": {
+        "content": {
+          "description": "Message content",
+          "type": "string"
+        },
+        "recipient_email": {
+          "description": "Email of the message recipient",
+          "format": "email",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "recipient_email"
+      ],
+      "title": "MessageRequest",
+      "type": "object"
+    }
+  },
+  "paths": {
+    "/api/messages": {
+      "get": {
+        "description": "Retrieves all messages for the authenticated user",
+        "operationId": "ElixirPhoenixChatWeb.MessageController.get_messages",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Message"
+              },
+              "type": "array"
+            }
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "500": {
+            "description": "Failed to retrieve messages"
+          },
+          "504": {
+            "description": "Request timeout"
+          }
+        },
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "summary": "Get user messages",
+        "tags": [
+          "Message"
+        ]
+      },
+      "post": {
+        "description": "Sends a message to a specific user by email",
+        "operationId": "ElixirPhoenixChatWeb.MessageController.send_message",
+        "parameters": [
+          {
+            "description": "Message parameters",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Message sent"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "404": {
+            "description": "Recipient not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "summary": "Send a message",
+        "tags": [
+          "Message"
+        ]
+      }
+    },
+    "/api/users": {
+      "post": {
+        "description": "Creates a new user with the given email and generates a secure password",
+        "operationId": "ElixirPhoenixChatWeb.UserController.create",
+        "parameters": [
+          {
+            "description": "User creation parameters",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "schema": {
+              "$ref": "#/definitions/UserResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        },
+        "summary": "Create a new user",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/change-password": {
+      "put": {
+        "description": "Changes user password after verifying the current password",
+        "operationId": "ElixirPhoenixChatWeb.UserController.change_password",
+        "parameters": [
+          {
+            "description": "Password change parameters",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PasswordChangeRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password updated successfully"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        },
+        "summary": "Change user password",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/login": {
+      "post": {
+        "description": "Authenticates a user with email and password, returning a JWT token",
+        "operationId": "ElixirPhoenixChatWeb.UserController.login",
+        "parameters": [
+          {
+            "description": "Login parameters",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "schema": {
+              "$ref": "#/definitions/LoginResponse"
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        },
+        "summary": "User login",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "description": "Retrieves details for the authenticated user",
+        "operationId": "ElixirPhoenixChatWeb.UserController.get_current_user",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "401": {
+            "description": "Invalid token"
+          }
+        },
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "summary": "Get current user details",
+        "tags": [
+          "User"
+        ]
+      }
+    }
+  },
+  "swagger": "2.0",
+  "tags": [
+    {
+      "name": "Users",
+      "description": "User management operations"
+    },
+    {
+      "name": "Messages",
+      "description": "Message operations"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "JWT": {
+      "in": "header",
+      "name": "Authorization",
+      "type": "apiKey",
+      "description": "Add 'Bearer ' + your JWT token to authorize"
+    }
+  }
+}

@@ -13,96 +13,161 @@ class ThemeStore {
   late final Signal<ThemeData> theme;
   late final Signal<ThemeData> darkTheme;
 
-  // Define your light and dark themes here
-  // Inspired by shadcn/ui slate/zinc
+  // Define your light and dark themes here - minimalist white/black for light and black/gray for dark
   final _lightThemeData = ThemeData(
-    brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue, // Adjust seed color
-      brightness: Brightness.light,
-      primary: const Color(0xFF2563EB), // slate-700ish
-      onPrimary: Colors.white,
-      secondary: const Color(0xFF475569), // slate-600
-      onSecondary: Colors.white,
-      error: const Color(0xFFDC2626), // red-600
-      onError: Colors.white,
-      surface: const Color(0xFFF8FAFC), // slate-50
-      onSurface: const Color(0xFF0F172A), // slate-900
-    ),
     useMaterial3: true,
-    scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+    brightness: Brightness.light,
+    colorScheme: ColorScheme.light(
+      primary: Colors.black,
+      onPrimary: Colors.white,
+      secondary: Colors.grey.shade800,
+      onSecondary: Colors.white,
+      surface: Colors.white,
+      onSurface: Colors.black,
+      error: Colors.red.shade600,
+      onError: Colors.white,
+      surfaceContainerHighest: Colors.grey.shade200,
+    ),
+    scaffoldBackgroundColor: Colors.white,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
-      foregroundColor: Color(0xFF0F172A),
+      foregroundColor: Colors.black,
       elevation: 0,
     ),
     cardTheme: CardTheme(
       color: Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.black),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      labelStyle: TextStyle(color: Colors.grey.shade700),
+      floatingLabelStyle: const TextStyle(color: Colors.black),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2563EB),
         foregroundColor: Colors.white,
+        backgroundColor: Colors.black,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: const Color(0xFF2563EB),
+        foregroundColor: Colors.black,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    ),
+    iconTheme: const IconThemeData(
+      color: Colors.black,
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        color: Colors.black,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+      contentTextStyle: TextStyle(
+        color: Colors.grey.shade800,
+        fontSize: 16,
       ),
     ),
   );
 
   final _darkThemeData = ThemeData(
-    brightness: Brightness.dark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue, // Adjust seed color
-      brightness: Brightness.dark,
-      primary: const Color(0xFF3B82F6), // slate-500ish
-      onPrimary: const Color(0xFFF8FAFC), // slate-50
-      secondary: const Color(0xFF94A3B8), // slate-400
-      onSecondary: const Color(0xFF0F172A), // slate-900
-      error: const Color(0xFFF87171), // red-400
-      onError: const Color(0xFF0F172A),
-      surface: const Color(0xFF0F172A), // slate-900
-      onSurface: const Color(0xFFF1F5F9), // slate-100
-    ),
     useMaterial3: true,
-    scaffoldBackgroundColor: const Color(0xFF0F172A),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF1E293B),
-      foregroundColor: Color(0xFFF1F5F9),
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.dark(
+      primary: Colors.white,
+      onPrimary: Colors.black,
+      secondary: Colors.grey.shade400,
+      onSecondary: Colors.black,
+      surface: Colors.grey.shade900,
+      onSurface: Colors.white,
+      error: Colors.red.shade400,
+      onError: Colors.black,
+      surfaceContainerHighest: Colors.grey.shade700,
+    ),
+    scaffoldBackgroundColor: Colors.black,
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.grey.shade900,
+      foregroundColor: Colors.white,
       elevation: 0,
     ),
     cardTheme: CardTheme(
-      color: const Color(0xFF1E293B),
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      color: Colors.grey.shade900,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Colors.grey.shade800),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      fillColor: const Color(0xFF334155), // slate-700
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade700),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade700),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.white),
+      ),
       filled: true,
+      fillColor: Colors.grey.shade900,
+      labelStyle: TextStyle(color: Colors.grey.shade300),
+      floatingLabelStyle: const TextStyle(color: Colors.white),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF3B82F6),
-        foregroundColor: const Color(0xFFF8FAFC),
+        foregroundColor: Colors.black,
+        backgroundColor: Colors.white,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: const Color(0xFF60A5FA), // slate-400
+        foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    ),
+    iconTheme: const IconThemeData(
+      color: Colors.white,
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: Colors.grey.shade900,
+      surfaceTintColor: Colors.grey.shade900,
+      titleTextStyle: const TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+      contentTextStyle: TextStyle(
+        color: Colors.grey.shade300,
+        fontSize: 16,
       ),
     ),
   );
@@ -148,6 +213,30 @@ class ThemeStore {
   void setThemeMode(ThemeModeOption mode) {
     _themeModeOption.value = mode;
     _saveThemePreference(mode);
+  }
+
+  ThemeData getDarkTheme() {
+    return _darkThemeData;
+  }
+
+  ThemeData lightTheme() {
+    return _lightThemeData;
+  }
+
+  bool isDarkMode() {
+    return _themeModeOption() == ThemeModeOption.dark ||
+        (_themeModeOption() == ThemeModeOption.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
+  }
+
+  void toggleTheme() {
+    final currentMode = _themeModeOption();
+    if (currentMode == ThemeModeOption.dark) {
+      setThemeMode(ThemeModeOption.light);
+    } else {
+      setThemeMode(ThemeModeOption.dark);
+    }
   }
 
   Future<void> _loadThemePreference() async {

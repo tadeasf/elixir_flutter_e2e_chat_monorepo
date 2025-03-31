@@ -21,3 +21,6 @@ elixir_test-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Environment variables
+.env

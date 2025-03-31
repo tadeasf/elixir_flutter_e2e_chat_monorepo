@@ -41,6 +41,15 @@ dependencies:
   solidart: ^1.0.0
   flutter_solidart: ^1.0.0
   shared_preferences: ^2.2.3
+  crypto: ^3.0.3
+  flutter_gravatar: ^2.0.2
+  
+  # UI packages
+  stylish_bottom_bar: ^1.0.3
+  animated_toggle_switch: ^0.8.0
+  sleek_circular_slider: ^2.0.1
+  sidebarx: ^0.16.3
+  responsive_framework: ^1.1.1
 
 dev_dependencies:
   flutter_test:

@@ -133,6 +133,7 @@ class AuthStore {
     if (currentToken == null) return;
 
     try {
+      _setLoading(true);
       final user = await _authService.fetchUserDetails(currentToken);
       currentUser.value = user;
       if (user == null) {
@@ -147,6 +148,8 @@ class AuthStore {
         print('Error fetching user details: $e');
       }
       // Handle error, maybe clear token if invalid
+    } finally {
+      _setLoading(false);
     }
   }
 

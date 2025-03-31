@@ -28,7 +28,9 @@ defmodule ElixirTest.MixProject do
       {:plug_cowboy, "~> 2.6"},
       {:bcrypt_elixir, "~> 3.0"},
       {:uuid, "~> 1.1"},
-      {:libcluster, "~> 3.3"}
+      {:libcluster, "~> 3.3"},
+      {:open_api_spex, "~> 3.21"},
+      {:cors_plug, "~> 3.0"}
     ]
   end
 end

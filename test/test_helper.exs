@@ -1,3 +1,5 @@
-# Load test support files
-Code.require_file("support/test_helper.ex", __DIR__)
+# Initialize ExUnit
 ExUnit.start()
+
+# Load test utilities
+Code.require_file("support/test_utils.ex", __DIR__)

@@ -2,7 +2,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
   use ExUnit.Case, async: false  # Disable async since we're managing a shared application state
   import Plug.Test
   import Plug.Conn
-  alias ElixirTest.TestHelper
+  alias ElixirTest.TestUtils
 
   @opts ElixirTest.Router.init([])
 
@@ -19,7 +19,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
 
   setup do
     # Clean the database before each test
-    TestHelper.clean_db()
+    TestUtils.clean_db()
     :ok
   end
 
@@ -32,7 +32,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> Map.put(:body_params, %{"email" => email})
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 201
       body = Jason.decode!(resp.resp_body)
@@ -55,7 +55,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       patch_conn = put_in(conn.path_params, %{})
 
       resp = ElixirTest.Router.call(patch_conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 400
       assert resp.resp_body == "Email is required"
@@ -70,7 +70,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> Map.put(:body_params, %{"email" => email})
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
       assert resp.status == 201
 
       # Try to create second user with same email
@@ -79,7 +79,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> Map.put(:body_params, %{"email" => email})
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 400
       assert resp.resp_body == "Email already exists"
@@ -89,11 +89,11 @@ defmodule ElixirTest.Controllers.UserControllerTest do
   describe "user login" do
     test "successful login returns token" do
       # Create user
-      user = TestHelper.setup_test_user()
-      TestHelper.wait_for_tasks()
+      user = TestUtils.setup_test_user()
+      TestUtils.wait_for_tasks()
 
       # Login
-      result = TestHelper.login_test_user(user["email"], user["generated_password"])
+      result = TestUtils.login_test_user(user["email"], user["generated_password"])
       assert result["token"] != nil
     end
 
@@ -103,7 +103,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> Map.put(:body_params, %{"email" => "invalid@example.com", "password" => "invalid"})
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 401
     end
@@ -112,8 +112,8 @@ defmodule ElixirTest.Controllers.UserControllerTest do
   describe "password change" do
     test "successfully changes password" do
       # Create user
-      user = TestHelper.setup_test_user()
-      TestHelper.wait_for_tasks()
+      user = TestUtils.setup_test_user()
+      TestUtils.wait_for_tasks()
 
       # Change password
       conn = conn(:put, "/users/change-password")
@@ -125,21 +125,21 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       })
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 200
 
       # Try logging in with new password
-      result = TestHelper.login_test_user(user["email"], "new_password")
+      result = TestUtils.login_test_user(user["email"], "new_password")
       assert result["token"] != nil
     end
   end
 
   describe "messaging" do
     setup do
-      user = TestHelper.setup_test_user()
-      TestHelper.wait_for_tasks()
-      %{"token" => token} = TestHelper.login_test_user(user["email"], user["generated_password"])
+      user = TestUtils.setup_test_user()
+      TestUtils.wait_for_tasks()
+      %{"token" => token} = TestUtils.login_test_user(user["email"], user["generated_password"])
       {:ok, %{user: user, token: token}}
     end
 
@@ -151,7 +151,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> Map.put(:body_params, %{"content" => "Test message"})
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
       assert resp.status == 201
 
       # Get messages
@@ -159,7 +159,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> put_req_header("authorization", "Bearer #{token}")
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 200
       messages = Jason.decode!(resp.resp_body)
@@ -175,7 +175,7 @@ defmodule ElixirTest.Controllers.UserControllerTest do
       |> Map.put(:body_params, %{"content" => "Test message"})
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 401
     end
@@ -195,14 +195,14 @@ defmodule ElixirTest.Controllers.UserControllerTest do
 
       # Wait for all messages to be sent
       Enum.each(tasks, &Task.await/1)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       # Verify all messages were saved
       conn = conn(:get, "/messages/#{user["user_id"]}")
       |> put_req_header("authorization", "Bearer #{token}")
 
       resp = ElixirTest.Router.call(conn, @opts)
-      TestHelper.wait_for_tasks()
+      TestUtils.wait_for_tasks()
 
       assert resp.status == 200
       messages = Jason.decode!(resp.resp_body)

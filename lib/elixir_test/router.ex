@@ -6,6 +6,12 @@ defmodule ElixirTest.Router do
   plug Plug.Logger
   plug :match
 
+  # Add CORS plug to handle preflight requests and set CORS headers
+  plug CORSPlug, origin: "*"
+
+  # Add the PutApiSpec plug to make the API spec available
+  plug OpenApiSpex.Plug.PutApiSpec, module: ElixirTest.ApiSpec
+
   # Configure request parsing with timeout and length limits
   plug Plug.Parsers,
     parsers: [:json],
@@ -21,6 +27,48 @@ defmodule ElixirTest.Router do
   def read_body(conn, opts) do
     {:ok, body, conn} = Plug.Conn.read_body(conn, opts)
     {:ok, body, conn}
+  end
+
+  # Serve OpenAPI spec
+  get "/api/openapi" do
+    OpenApiSpex.Plug.RenderSpec.call(conn, [])
+  end
+
+  # Serve Swagger UI
+  get "/swaggerui" do
+    html = """
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>ElixirTest API</title>
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.css">
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-standalone-preset.js"></script>
+        <script>
+          window.onload = function() {
+            window.ui = SwaggerUIBundle({
+              url: "/api/openapi",
+              dom_id: '#swagger-ui',
+              presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+              ],
+              layout: "StandaloneLayout",
+              deepLinking: true
+            });
+          }
+        </script>
+      </body>
+    </html>
+    """
+
+    conn
+    |> Plug.Conn.put_resp_content_type("text/html")
+    |> Plug.Conn.send_resp(200, html)
   end
 
   post "/users" do
@@ -41,6 +89,13 @@ defmodule ElixirTest.Router do
 
   get "/messages/:user_id" do
     UserController.get_messages(conn)
+  end
+
+  # Handle OPTIONS requests for CORS preflight
+  options _ do
+    conn
+    |> Plug.Conn.put_resp_header("allow", "GET, POST, PUT, OPTIONS")
+    |> Plug.Conn.send_resp(204, "")
   end
 
   match _ do

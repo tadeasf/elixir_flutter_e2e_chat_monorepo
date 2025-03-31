@@ -1,8 +1,32 @@
 defmodule ElixirTest.Controllers.UserController do
   import Plug.Conn
+  use Plug.Builder
+  use OpenApiSpex.ControllerSpecs
+
   alias ElixirTest.Auth
   alias ElixirTest.Database.DatabaseWorker
+  alias ElixirTest.Schemas.{
+    UserRequest, UserResponse,
+    LoginRequest, LoginResponse,
+    PasswordChangeRequest,
+    MessageRequest, MessagesResponse
+  }
   require Logger
+
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+
+  tags ["users", "messages"]
+  security [%{"bearerAuth" => []}]
+
+  operation :create,
+    summary: "Create a new user",
+    description: "Creates a new user with the given email and generates a secure password",
+    request_body: {"User creation parameters", "application/json", UserRequest},
+    responses: [
+      created: {"User created successfully", "application/json", UserResponse},
+      bad_request: "Invalid request parameters",
+      internal_server_error: "Server error"
+    ]
 
   def create(conn) do
     user_id = UUID.uuid4()
@@ -62,6 +86,16 @@ defmodule ElixirTest.Controllers.UserController do
     end
   end
 
+  operation :login,
+    summary: "User login",
+    description: "Authenticates a user with email and password, returning a JWT token",
+    request_body: {"Login parameters", "application/json", LoginRequest},
+    responses: [
+      ok: {"Login successful", "application/json", LoginResponse},
+      unauthorized: "Invalid credentials"
+    ],
+    security: [%{}]
+
   def login(conn) do
     with {:ok, %{"email" => email, "password" => password}} <- parse_body(conn),
          {:ok, user} <- find_user_by_email(email),
@@ -82,6 +116,16 @@ defmodule ElixirTest.Controllers.UserController do
         send_resp(conn, 401, "Invalid credentials")
     end
   end
+
+  operation :change_password,
+    summary: "Change user password",
+    description: "Changes user password after verifying the current password",
+    request_body: {"Password change parameters", "application/json", PasswordChangeRequest},
+    responses: [
+      ok: "Password updated successfully",
+      unauthorized: "Invalid credentials"
+    ],
+    security: [%{}]
 
   def change_password(conn) do
     with {:ok, %{"email" => email, "current_password" => current_password, "new_password" => new_password}} <- parse_body(conn),
@@ -113,12 +157,27 @@ defmodule ElixirTest.Controllers.UserController do
     end
   end
 
+  operation :send_message,
+    summary: "Send a message",
+    description: "Sends a message to a specific user by email",
+    request_body: {"Message parameters", "application/json", MessageRequest},
+    responses: [
+      created: "Message sent",
+      unauthorized: "Invalid token",
+      not_found: "Recipient not found",
+      internal_server_error: "Server error"
+    ]
+
   def send_message(conn) do
-    with {:ok, %{"content" => content}} <- parse_body(conn),
+    with {:ok, %{"content" => content, "recipient_email" => recipient_email}} <- parse_body(conn),
          {:ok, token} <- extract_token(conn),
-         {:ok, claims} <- Auth.verify_token(token) do
+         {:ok, claims} <- Auth.verify_token(token),
+         {:ok, recipient} <- find_user_by_email(recipient_email),
+         {:ok, sender} <- DatabaseWorker.find_one("users", %{"_id" => claims["user_id"]}) do
+
       message = %{
         user_id: claims["user_id"],
+        recipient_id: recipient["_id"],
         content: content,
         created_at: DateTime.utc_now()
       }
@@ -127,7 +186,7 @@ defmodule ElixirTest.Controllers.UserController do
       _task = Task.Supervisor.async_nolink(ElixirTest.TaskSupervisor, fn ->
         case DatabaseWorker.insert("messages", message) do
           {:ok, _} ->
-            Logger.info("Message sent by user: #{claims["user_id"]}")
+            Logger.info("Message sent by user: #{claims["user_id"]} to recipient: #{recipient["_id"]}")
             :ok
           {:error, error} ->
             Logger.error("Failed to save message: #{inspect(error)}")
@@ -135,17 +194,34 @@ defmodule ElixirTest.Controllers.UserController do
         end
       end)
 
-      # We don't need to wait for the task to complete
-      send_resp(conn, 201, "Message sent")
+      # Return JSON response with sender and recipient information
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(201, Jason.encode!(%{
+        message: "user #{sender["email"]} sent message to #{recipient_email}"
+      }))
     else
       {:error, :missing_token} ->
         Logger.warning("Missing authorization token for message send")
         send_resp(conn, 401, "Missing authorization token")
+      {:error, :not_found} ->
+        Logger.warning("Recipient not found")
+        send_resp(conn, 404, "Recipient not found")
       _ ->
-        Logger.warning("Invalid token for message send")
-        send_resp(conn, 401, "Invalid token")
+        Logger.warning("Invalid token or missing required parameters for message send")
+        send_resp(conn, 401, "Invalid token or missing required parameters")
     end
   end
+
+  operation :get_messages,
+    summary: "Get user messages",
+    description: "Retrieves all messages for the authenticated user",
+    responses: [
+      ok: {"List of messages", "application/json", MessagesResponse},
+      unauthorized: "Invalid token",
+      internal_server_error: "Failed to retrieve messages",
+      gateway_timeout: "Request timeout"
+    ]
 
   def get_messages(conn) do
     with {:ok, token} <- extract_token(conn),
@@ -153,11 +229,23 @@ defmodule ElixirTest.Controllers.UserController do
 
       # Use Task.Supervisor instead of DynamicSupervisor for task management
       task = Task.Supervisor.async(ElixirTest.TaskSupervisor, fn ->
-        case DatabaseWorker.find("messages", %{"user_id" => claims["user_id"]}) do
+        case DatabaseWorker.find("messages", %{"recipient_id" => claims["user_id"]}) do
           {:ok, messages} ->
-            messages = Enum.map(messages, &Map.take(&1, ["content", "created_at"]))
-            Logger.info("Retrieved #{length(messages)} messages for user: #{claims["user_id"]}")
-            {:ok, messages}
+            formatted_messages = Enum.map(messages, fn message ->
+              # Get sender info if needed
+              sender_id = message["user_id"]
+              case DatabaseWorker.find_one("users", %{"_id" => sender_id}) do
+                {:ok, sender} ->
+                  Map.merge(
+                    Map.take(message, ["content", "created_at"]),
+                    %{"sender_email" => sender["email"]}
+                  )
+                _ ->
+                  Map.take(message, ["content", "created_at"])
+              end
+            end)
+            Logger.info("Retrieved #{length(formatted_messages)} messages for user: #{claims["user_id"]}")
+            {:ok, formatted_messages}
           {:error, error} ->
             Logger.error("Failed to retrieve messages: #{inspect(error)}")
             {:error, error}
@@ -181,6 +269,29 @@ defmodule ElixirTest.Controllers.UserController do
     else
       _ ->
         Logger.warning("Unauthorized message retrieval attempt")
+        send_resp(conn, 401, "Invalid token")
+    end
+  end
+
+  # New endpoint for fetching current user details
+  operation :get_current_user,
+    summary: "Get current user details",
+    description: "Retrieves details for the authenticated user",
+    responses: [
+      ok: {"User details", "application/json", ElixirTest.Schemas.User},
+      unauthorized: "Invalid token"
+    ],
+    security: [%{"bearerAuth" => []}]
+
+  def get_current_user(conn) do
+    with {:ok, token} <- extract_token(conn),
+         {:ok, claims} <- Auth.verify_token(token),
+         {:ok, user} <- DatabaseWorker.find_one("users", %{"_id" => claims["user_id"]}) do
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(200, Jason.encode!(user))
+    else
+      _ ->
         send_resp(conn, 401, "Invalid token")
     end
   end

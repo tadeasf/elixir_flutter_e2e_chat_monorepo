@@ -54,7 +54,12 @@ defmodule ElixirPhoenixChat.MixProject do
       {:joken, "~> 2.6"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      # Security-related dependencies
+      {:cloak, "~> 1.1.2"},            # For field encryption
+      {:cloak_ecto, "~> 1.2.0"},       # Ecto integration for Cloak
+      {:html_sanitize_ex, "~> 1.4.2"}, # For XSS prevention on content
+      {:corsica, "~> 1.3"}             # For proper CORS headers
     ]
   end
 
@@ -74,7 +79,8 @@ defmodule ElixirPhoenixChat.MixProject do
         "tailwind elixir_phoenix_chat --minify",
         "esbuild elixir_phoenix_chat --minify",
         "phx.digest"
-      ]
+      ],
+      "security.encrypt": ["encrypt_messages"] # Add custom mix task for encryption migration
     ]
   end
 end

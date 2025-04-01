@@ -43,5 +43,23 @@ defmodule ElixirPhoenixChatWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+
+  # CORS support using Corsica
+  plug Corsica, origins: "*"
+
+  # Add security headers
+  plug :put_secure_browser_headers
+
   plug ElixirPhoenixChatWeb.Router
+
+  # Function to add security headers to all responses
+  def put_secure_browser_headers(conn, _opts) do
+    Plug.Conn.merge_resp_headers(conn, [
+      {"content-security-policy", "default-src 'self'"},
+      {"x-content-type-options", "nosniff"},
+      {"x-frame-options", "SAMEORIGIN"},
+      {"x-xss-protection", "1; mode=block"},
+      {"strict-transport-security", "max-age=31536000; includeSubDomains"}
+    ])
+  end
 end

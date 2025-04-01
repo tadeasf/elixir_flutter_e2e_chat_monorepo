@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  phoenix:
+    build: 
+      context: ./elixir_phoenix_chat
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env.worker
+    volumes:
+      - phoenix_data:/app/data
+
+volumes:
+  phoenix_data:

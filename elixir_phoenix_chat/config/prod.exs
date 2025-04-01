@@ -6,12 +6,12 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :elixir_phoenix_chat, ElixirPhoenixChatWeb.Endpoint,
-  url: [host: "secure-chat.tadeasfort.com", port: 443, scheme: "https"],
+  url: [host: "elixir-chat.tadeasfort.com", port: 443, scheme: "https"],
   cache_static_manifest: "priv/static/cache_manifest.json",
   server: true,
-  check_origin: ["https://secure-chat.tadeasfort.com"],
+  check_origin: ["https://elixir-chat.tadeasfort.com"],
   # Configure port to 4000
-  http: [port: 4000, transport_options: [socket_opts: [:inet6]]],
+  http: [port: 4000],
   # Configure secret key base and other sensitive data
   secret_key_base: System.get_env("SECRET_KEY_BASE")
 

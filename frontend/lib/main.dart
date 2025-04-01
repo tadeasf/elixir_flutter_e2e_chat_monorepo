@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 
 // Import Stores and Services
 import 'services/auth_service.dart';
@@ -9,10 +10,15 @@ import 'stores/auth_store.dart';
 import 'stores/message_store.dart';
 
 // Import Screens
-import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 
+// Import Widgets
+import 'widgets/auth_layout.dart';
+
 void main() {
+  // Initialize the Flutter binding
+  WidgetsFlutterBinding.ensureInitialized();
+
   // Instantiate services
   final authService = AuthService();
   final messageService = MessageService();
@@ -45,8 +51,17 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Elixir Test App',
           theme: themeData,
-          darkTheme: themeStore.darkTheme(),
+          darkTheme: themeStore.getDarkTheme(),
           themeMode: themeStore.currentThemeMode,
+          builder: (context, child) => ResponsiveBreakpoints.builder(
+            child: child!,
+            breakpoints: [
+              const Breakpoint(start: 0, end: 450, name: MOBILE),
+              const Breakpoint(start: 451, end: 800, name: TABLET),
+              const Breakpoint(start: 801, end: 1920, name: DESKTOP),
+              const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
+            ],
+          ),
           home: const AuthWrapper(), // Ensure AuthWrapper is defined below
         );
       },
@@ -66,7 +81,7 @@ class AuthWrapper extends StatelessWidget {
         if (isLoggedIn) {
           return const DashboardScreen();
         } else {
-          return const LoginScreen();
+          return const AuthLayout();
         }
       },
     );

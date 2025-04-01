@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
-  final String baseUrl = 'http://localhost:4000';
+  final String baseUrl = 'http://localhost:4000/api';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   User? _currentUser;
@@ -84,6 +84,11 @@ class AuthService extends ChangeNotifier {
         }),
       );
 
+      if (kDebugMode) {
+        debugPrint('Login response status: ${response.statusCode}');
+        debugPrint('Login response body: ${response.body}');
+      }
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _token = data['token'] as String?;
@@ -142,8 +147,9 @@ class AuthService extends ChangeNotifier {
   // Fetch current user details
   Future<User?> fetchUserDetails(String token) async {
     try {
+      _setLoading(true);
       final response = await http.get(
-        Uri.parse('$baseUrl/users/current'),
+        Uri.parse('$baseUrl/users/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -151,14 +157,19 @@ class AuthService extends ChangeNotifier {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return User.fromJson(data);
+        _currentUser = User.fromJson(data);
+        return _currentUser;
       } else {
         debugPrint('Failed to fetch user details: ${response.body}');
+        _setError('Failed to fetch user details: ${response.body}');
         return null;
       }
     } catch (e) {
       debugPrint('Error fetching user details: $e');
+      _setError('Error fetching user details: $e');
       return null;
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -169,6 +180,7 @@ class AuthService extends ChangeNotifier {
 
   void _setError(String? errorMessage) {
     _error = errorMessage;
+    notifyListeners();
   }
 }
 

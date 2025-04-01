@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:intl/intl.dart';
+import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 import '../models/message_model.dart';
 import '../stores/auth_store.dart';
 import '../stores/message_store.dart';
@@ -25,18 +26,56 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Message> _messages = [];
   String? _currentUserEmail;
   bool _isSending = false;
+  // Track message IDs to prevent duplicates
+  final Set<String> _messageIds = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCurrentUser();
-      setState(() {
-        _messages.addAll(widget.initialMessages);
-        _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        _scrollToBottom();
-      });
+
+      // Clear existing messages
+      _messages.clear();
+      _messageIds.clear();
+
+      // Get conversation messages from the store first
+      final messageStore = context.get<MessageStore>();
+      final conversationMessages = messageStore
+          .messagesByConversation()
+          .entries
+          .where((entry) => entry.key == widget.recipientEmail)
+          .map((entry) => entry.value)
+          .firstOrNull;
+
+      if (conversationMessages != null && conversationMessages.isNotEmpty) {
+        _addMessagesWithDeduplication(conversationMessages);
+      } else if (widget.initialMessages.isNotEmpty) {
+        // Only use initialMessages if no messages found in the store
+        _addMessagesWithDeduplication(widget.initialMessages);
+      }
+
+      _scrollToBottom();
     });
+  }
+
+  // Helper method to add messages with deduplication
+  void _addMessagesWithDeduplication(List<Message> messagesToAdd) {
+    for (final message in messagesToAdd) {
+      final messageId = _generateMessageId(message);
+      if (!_messageIds.contains(messageId)) {
+        _messages.add(message);
+        _messageIds.add(messageId);
+      }
+    }
+    // Sort by timestamp
+    _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  // Generate a unique ID for deduplication (same as in MessageStore)
+  String _generateMessageId(Message message) {
+    final timestamp = message.createdAt.toIso8601String();
+    return '${message.content}|${message.senderEmail}|${message.recipientEmail ?? ""}|$timestamp';
   }
 
   @override
@@ -86,12 +125,33 @@ class _ChatScreenState extends State<ChatScreen> {
       content: messageText,
       createdAt: DateTime.now(),
       senderEmail: _currentUserEmail!,
+      recipientEmail: widget.recipientEmail,
+      isSent: true,
     );
 
+    // Add to local state with deduplication
+    final messageId = _generateMessageId(optimisticMessage);
+    bool isNewMessage = false;
+
     setState(() {
-      _messages.add(optimisticMessage);
-      _messageController.clear();
+      if (!_messageIds.contains(messageId)) {
+        _messages.add(optimisticMessage);
+        _messageIds.add(messageId);
+        _messageController.clear();
+        isNewMessage = true;
+      } else {
+        // Message already exists, just clear the input field
+        _messageController.clear();
+      }
     });
+
+    // Only continue sending if this is a new message
+    if (!isNewMessage) {
+      setState(() {
+        _isSending = false;
+      });
+      return;
+    }
 
     _scrollToBottom();
 
@@ -102,23 +162,27 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       if (!success && mounted) {
+        // Remove the optimistic message if send failed
         setState(() {
-          _messages.removeWhere((msg) =>
-              msg.createdAt == optimisticMessage.createdAt &&
-              msg.content == optimisticMessage.content);
+          final messageId = _generateMessageId(optimisticMessage);
+          _messages.removeWhere((msg) => _generateMessageId(msg) == messageId);
+          _messageIds.remove(messageId);
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(messageStore.error() ?? 'Failed to send message')),
         );
-      } else {}
+      }
     } catch (e) {
       if (mounted) {
+        // Remove the optimistic message if there was an error
         setState(() {
-          _messages.removeWhere((msg) =>
-              msg.createdAt == optimisticMessage.createdAt &&
-              msg.content == optimisticMessage.content);
+          final messageId = _generateMessageId(optimisticMessage);
+          _messages.removeWhere((msg) => _generateMessageId(msg) == messageId);
+          _messageIds.remove(messageId);
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
@@ -185,12 +249,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   backgroundColor:
                       _isSending ? Colors.grey : Theme.of(context).primaryColor,
                   child: _isSending
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                      ? SleekCircularSlider(
+                          appearance: CircularSliderAppearance(
+                            size: 24,
+                            spinnerMode: true,
+                            animationEnabled: true,
+                            customColors: CustomSliderColors(
+                              dotColor: Colors.white,
+                              progressBarColor: Colors.white,
+                              trackColor: Colors.white.withValues(alpha: 77),
+                            ),
                           ),
                         )
                       : const Icon(Icons.send, color: Colors.white, size: 18),
@@ -206,6 +274,29 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageBubble(Message message, bool isMe) {
     final dateFormat = DateFormat('HH:mm');
     final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    // In dark mode, swap the styles - use primary color for received messages and surface for sent
+    // In light mode, keep original behavior
+    final bubbleColor = isDarkMode
+        ? (isMe
+            ? theme.colorScheme.surfaceContainerHighest
+            : theme.colorScheme.primary.withValues(alpha: 217))
+        : (isMe
+            ? theme.colorScheme.primary
+            : theme.colorScheme.surfaceContainerHighest);
+
+    // Text color needs to be swapped similarly
+    final textColor = isDarkMode
+        ? (isMe
+            ? theme.colorScheme.onSurfaceVariant
+            : theme.colorScheme.onPrimary)
+        : (isMe
+            ? theme.colorScheme.onPrimary
+            : theme.colorScheme.onSurfaceVariant);
+
+    // Time color follows text color
+    final timeColor = textColor.withAlpha(178);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -236,9 +327,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: isMe
-                  ? theme.primaryColor
-                  : theme.colorScheme.surfaceContainerHighest,
+              color: bubbleColor,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
                 topRight: const Radius.circular(18),
@@ -254,9 +343,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   message.content,
                   style: TextStyle(
-                    color: isMe
-                        ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.onSurfaceVariant,
+                    color: textColor,
+                    // Increase font weight slightly for better readability in dark mode
+                    fontWeight: (!isMe && isDarkMode) ? FontWeight.w500 : null,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -264,9 +353,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   dateFormat.format(message.createdAt.toLocal()),
                   style: TextStyle(
                     fontSize: 10,
-                    color: isMe
-                        ? theme.colorScheme.onPrimary.withAlpha(178)
-                        : theme.colorScheme.onSurfaceVariant.withAlpha(178),
+                    color: timeColor,
                   ),
                 ),
               ],

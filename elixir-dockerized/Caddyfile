@@ -1,0 +1,21 @@
+YOUR_DOMAIN {
+    # Direct request to the local Phoenix instance
+    reverse_proxy localhost:4000 {
+        health_path /health
+        health_interval 10s
+    }
+    
+    # Forward to the other nodes as well
+    reverse_proxy WORKER_IP:4000 WORKER2_IP:4000 {
+        lb_policy round_robin
+        health_path /health
+        health_interval 10s
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+    }
+}

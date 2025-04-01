@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 // import 'package:provider/provider.dart'; // Remove provider
 import 'package:flutter_solidart/flutter_solidart.dart'; // Add solidart
 import 'package:intl/intl.dart';
+import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 import '../stores/auth_store.dart'; // Use AuthStore
 import '../stores/message_store.dart'; // Use MessageStore
 // import '../services/auth_service.dart';
@@ -15,15 +16,27 @@ class MessagesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We might need stateful features later for things like RefreshIndicator,
-    // but let's try keeping it stateless for now.
-    // Fetch messages on initial load or when dependencies change.
-    // The MessageStore already fetches messages when the user logs in.
-    // We might need an explicit refresh button/action.
-    // context.get<MessageStore>().fetchMessages(); // Avoid calling fetch directly in build
+    // Fetch messages on initial load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.get<MessageStore>().fetchMessages();
+    });
 
     return Scaffold(
-      body: _MessagesScreenContent(),
+      appBar: AppBar(
+        title: const Text('Messages'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.get<MessageStore>().fetchMessages();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Refreshing messages...')),
+              );
+            },
+          ),
+        ],
+      ),
+      body: const _MessagesScreenContent(),
       floatingActionButton: FloatingActionButton(
         // Use context.get to access the store for the FAB action
         onPressed: () => _showSendMessageDialog(context),
@@ -87,7 +100,21 @@ class _MessagesScreenContent extends StatelessWidget {
       builder: (context, isLoading, _) {
         if (isLoading && context.get<MessageStore>().messages().isEmpty) {
           // Show loading only if messages are empty initially
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: SleekCircularSlider(
+              appearance: CircularSliderAppearance(
+                size: 50,
+                spinnerMode: true,
+                animationEnabled: true,
+                customColors: CustomSliderColors(
+                  dotColor: Theme.of(context).colorScheme.primary,
+                  progressBarColor: Theme.of(context).colorScheme.primary,
+                  trackColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+            ),
+          );
         }
 
         // Use SignalBuilder to react to message list changes
@@ -103,8 +130,8 @@ class _MessagesScreenContent extends StatelessWidget {
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       // FAB handles this now
-                      onPressed: () =>
-                          MessagesScreen()._showSendMessageDialog(context),
+                      onPressed: () => const MessagesScreen()
+                          ._showSendMessageDialog(context),
                       icon: const Icon(Icons.message),
                       label: const Text('Start a new conversation'),
                     ),

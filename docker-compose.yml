@@ -10,9 +10,37 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=root
       - MONGO_INITDB_ROOT_PASSWORD=rootpassword
-      - MONGO_INITDB_DATABASE=elixir_test
+      - MONGO_INITDB_DATABASE=elixir_chat
     command: mongod --auth
+    networks:
+      - phoenix_network
+    
+  phoenix:
+    build: 
+      context: ./elixir_phoenix_chat
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_URL=mongodb://root:rootpassword@mongodb:27017/elixir_chat?authSource=admin
+      - POOL_SIZE=2
+      - JWT_SECRET=your_jwt_secret_here
+      - SECRET_KEY_BASE=your_secret_key_base_here
+      - ENCRYPTION_KEY=your_encryption_key_here
+      - PORT=4000
+      - PHX_HOST=localhost
+      - MIX_ENV=prod
+    volumes:
+      - phoenix_data:/app/data
+    networks:
+      - phoenix_network
 
 volumes:
   mongodb_data:
-    driver: local 
+  phoenix_data:
+
+networks:
+  phoenix_network:
+    driver: bridge 

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 // import 'package:provider/provider.dart'; // Remove provider
 import 'package:flutter_solidart/flutter_solidart.dart'; // Add solidart
+import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 // import '../services/auth_service.dart'; // Use stores
 // import '../services/message_service.dart';
 import '../stores/message_store.dart'; // Use MessageStore
+import '../stores/auth_store.dart'; // Use AuthStore
+import '../screens/chat_screen.dart'; // Use ChatScreen
+// Add Message model import
 
 class NewMessageDialog extends StatefulWidget {
   const NewMessageDialog({super.key});
@@ -18,6 +22,7 @@ class _NewMessageDialogState extends State<NewMessageDialog> {
   final _contentController = TextEditingController();
   bool _isLoading = false; // Keep local loading state for the dialog itself
   String? _error; // Keep local error state for the dialog
+  bool _isSubmitting = false; // Flag to prevent double submissions
 
   @override
   void dispose() {
@@ -27,22 +32,26 @@ class _NewMessageDialogState extends State<NewMessageDialog> {
   }
 
   Future<void> _sendMessage() async {
-    if (!_formKey.currentState!.validate()) {
+    if (!_formKey.currentState!.validate() || _isSubmitting) {
       return;
     }
 
     setState(() {
       _isLoading = true;
       _error = null;
+      _isSubmitting = true; // Set flag to prevent double submissions
     });
 
     try {
       // Get MessageStore
       final messageStore = context.get<MessageStore>();
+      context.get<AuthStore>();
 
       // Debug logs (keep if useful)
       debugPrint('Sending message to: ${_recipientController.text}');
       debugPrint('Message content: ${_contentController.text}');
+
+      // Create an optimistic message for immediate display
 
       // Call store action
       final success = await messageStore.sendMessage(
@@ -52,12 +61,23 @@ class _NewMessageDialogState extends State<NewMessageDialog> {
 
       if (success && mounted) {
         debugPrint('Message sent successfully via dialog');
-        Navigator.of(context).pop(true); // Return true to indicate success
+        Navigator.of(context).pop(); // Close dialog
+
+        // Navigate to chat screen without the optimistic message as it's already in the store
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              recipientEmail: _recipientController.text,
+              initialMessages: const [], // Don't pass optimistic message, let store handle it
+            ),
+          ),
+        );
       } else if (mounted) {
         setState(() {
           // Get error from the store
           _error = messageStore.error() ?? 'Failed to send message';
           _isLoading = false;
+          _isSubmitting = false; // Reset submission flag on error
         });
         debugPrint('Error sending message (dialog): $_error');
       }
@@ -67,6 +87,7 @@ class _NewMessageDialogState extends State<NewMessageDialog> {
         setState(() {
           _error = 'An unexpected error occurred: $e';
           _isLoading = false;
+          _isSubmitting = false; // Reset submission flag on exception
         });
       }
       debugPrint('Exception while sending message (dialog): $e');
@@ -75,6 +96,7 @@ class _NewMessageDialogState extends State<NewMessageDialog> {
       if (_isLoading && mounted) {
         setState(() {
           _isLoading = false;
+          // Note: we don't reset _isSubmitting here since we're either navigating away or have already reset it
         });
       }
     }
@@ -171,10 +193,17 @@ class _NewMessageDialogState extends State<NewMessageDialog> {
         ElevatedButton.icon(
           onPressed: _isLoading ? null : _sendMessage,
           icon: _isLoading // Use local loading state
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              ? SleekCircularSlider(
+                  appearance: CircularSliderAppearance(
+                    size: 20,
+                    spinnerMode: true,
+                    animationEnabled: true,
+                    customColors: CustomSliderColors(
+                      dotColor: Colors.white,
+                      progressBarColor: Colors.white,
+                      trackColor: Colors.white.withAlpha(77),
+                    ),
+                  ),
                 )
               : const Icon(Icons.send),
           label: const Text('Send'),

@@ -24,3 +24,7 @@ elixir_test-*.tar
 
 # Environment variables
 .env
+.env.*
+!.env.example
+!.env.master.example
+!.env.worker.example

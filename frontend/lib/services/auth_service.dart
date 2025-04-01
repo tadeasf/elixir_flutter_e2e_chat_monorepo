@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
-  final String baseUrl = 'http://localhost:4000/api';
+  final String baseUrl = 'https://elixir-chat.tadeasfort.com/api';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   User? _currentUser;

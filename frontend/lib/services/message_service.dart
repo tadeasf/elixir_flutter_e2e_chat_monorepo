@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/message_model.dart';
 
 class MessageService {
-  final String baseUrl = 'http://localhost:4000/api';
+  final String baseUrl = 'https://elixir-chat.tadeasfort.com/api';
   bool _isLoading = false;
 
   String? _lastError;

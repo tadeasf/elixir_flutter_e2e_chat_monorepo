@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 import '../stores/auth_store.dart';
@@ -224,7 +225,6 @@ class _SignupView extends StatefulWidget {
 class _SignupViewState extends State<_SignupView> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   String? _generatedPassword; // Store generated password as state
   bool _showPasswordDialogScheduled = false;
   bool _showErrorSnackbarScheduled = false;
@@ -330,28 +330,59 @@ class _SignupViewState extends State<_SignupView> {
           const SnackBar(content: Text('Logging in automatically...')),
         );
 
-        // Perform auto-login
-        Future.delayed(const Duration(milliseconds: 500), () async {
-          if (mounted) {
-            final success = await authStore.login(email, password);
-            if (!success && mounted) {
-              // If auto-login fails, navigate to login screen and show error
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content:
-                        Text('Auto-login failed. Please log in manually.')),
-              );
-              widget.onLoginRequest();
-            }
-          }
-        });
-      } else {
-        // Navigate to login screen if we can't auto-login
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            widget.onLoginRequest();
-          }
-        });
+        // Perform auto-login - don't use Future.delayed as it can cause issues
+        _performAutoLogin(authStore, email, password);
+      }
+    }
+  }
+
+  // Separate method for auto-login to improve error handling
+  Future<void> _performAutoLogin(
+      AuthStore authStore, String email, String password) async {
+    if (!mounted) return;
+
+    try {
+      if (kDebugMode) {
+        print('Attempting auto-login with email: $email');
+      }
+
+      final success = await authStore.login(email, password);
+
+      if (kDebugMode) {
+        print('Auto-login result: ${success ? 'Success' : 'Failed'}');
+        print('Current token: ${authStore.token() != null ? 'Valid' : 'Null'}');
+        print('Is logged in: ${authStore.isLoggedIn()}');
+      }
+
+      if (!success && mounted) {
+        // If auto-login fails, navigate to login screen and show error
+        if (kDebugMode) {
+          print('Auto-login failed, showing error and redirecting to login');
+          print('Error message: ${authStore.error() ?? 'No error message'}');
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Auto-login failed. Please log in manually.')),
+        );
+        widget.onLoginRequest();
+      } else if (success && kDebugMode) {
+        if (kDebugMode) {
+          print(
+              'Auto-login successful - AuthWrapper should handle redirection to dashboard');
+        }
+      }
+      // No else needed - successful login is handled by AuthWrapper in main.dart
+    } catch (e) {
+      if (kDebugMode) {
+        print('Exception during auto-login: $e');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login error: $e')),
+        );
+        widget.onLoginRequest();
       }
     }
   }
@@ -427,8 +458,7 @@ class _SignupViewState extends State<_SignupView> {
         actions: [
           TextButton(
             onPressed: () {
-              // Explicitly use navigation context from the dialog
-              Navigator.of(ctx).pop();
+              // Use _clearGeneratedPassword which handles dialog dismissal
               _clearGeneratedPassword();
             },
             child: const Text('OK'),
@@ -485,20 +515,8 @@ class _SignupViewState extends State<_SignupView> {
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _passwordController,
-                                decoration: const InputDecoration(
-                                    labelText: 'Password'),
-                                obscureText: true,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your password';
-                                  }
-                                  return null;
-                                },
-                              ),
                               const SizedBox(height: 30),
+                              // Removed password field from signup form
                               if (errorMsg != null &&
                                   _generatedPassword == null)
                                 Padding(
@@ -557,7 +575,7 @@ class _SignupViewState extends State<_SignupView> {
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
+    // Removed _passwordController.dispose() since we don't use it anymore
     super.dispose();
   }
 }

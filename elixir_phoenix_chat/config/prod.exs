@@ -6,7 +6,24 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :elixir_phoenix_chat, ElixirPhoenixChatWeb.Endpoint,
-  cache_static_manifest: "priv/static/cache_manifest.json"
+  url: [host: "secure-chat.tadeasfort.com", port: 443, scheme: "https"],
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  server: true,
+  check_origin: ["https://secure-chat.tadeasfort.com"],
+  # Configure port to 4000
+  http: [port: 4000, transport_options: [socket_opts: [:inet6]]],
+  # Configure secret key base and other sensitive data
+  secret_key_base: System.get_env("SECRET_KEY_BASE")
+
+# Configure MongoDB connection
+config :elixir_phoenix_chat, ElixirPhoenixChat.Repo,
+  url: System.get_env("MONGODB_URL") ||
+       "mongodb://chat_user:strong_password@mongodb_server_ip:27017/elixir_chat?authSource=elixir_chat"
+
+# Configure distributed Erlang nodes
+config :elixir_phoenix_chat,
+  distributed: true,
+  node_name: System.get_env("NODE_NAME") || "elixir_chat@server_ip"
 
 # Do not print debug messages in production
 config :logger, level: :info
